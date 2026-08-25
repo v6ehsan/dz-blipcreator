@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<title>DZ-BlipCreator</title>
+<link rel="stylesheet" href="style.css?v=2.5.0">
+</head>
+<body>
+
+<div id="app" class="hidden">
+    <div class="wrapper">
+
+        <!-- Animated highlight sweep at the very top of the card -->
+        <div class="shimmer"></div>
+
+        <!-- HEADER -->
+        <div class="header">
+            <!-- Logo tile with pulsing dot badge, matches DZ-Coords -->
+            <div class="logo">
+                <div class="logo-inner">
+                    <img src="img/logo.png" class="logo-img" alt="DZTeam" />
+                </div>
+                <div class="logo-dot"></div>
+            </div>
+
+            <div class="brand">
+                <span class="brand-title">DZ<span class="accent">-BlipCreator</span></span>
+                <span class="brand-sub">by v6ehsan</span>
+            </div>
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="blips">Blips</button>
+                <button class="tab-btn" data-tab="markers">Markers</button>
+                <button class="tab-btn" data-tab="checkpoints">Checkpoints</button>
+                <button class="tab-btn" data-tab="active">Active Items</button>
+            </div>
+            <button id="closeBtn" class="close-btn">✕</button>
+        </div>
+
+        <!-- Divider below header -->
+        <div class="divider"></div>
+
+        <div class="body">
+
+            <!-- ============ BLIPS TAB ============ -->
+            <div class="tab-content active" id="tab-blips">
+                <div class="col col-list">
+                    <input type="text" id="blipSearch" placeholder="Search blips..." class="search-input">
+                    <div id="blipList" class="item-list"></div>
+                </div>
+
+                <div class="col col-preview">
+                    <div class="preview-box">
+                        <div id="blipPreviewIcon" class="preview-icon">?</div>
+                        <div class="preview-col">
+                            <div class="preview-name" id="blipSelectedName">No blip selected</div>
+                            <div class="live-badge" id="blipLiveBadge"><span class="live-dot"></span>Live preview in-game</div>
+                        </div>
+                    </div>
+
+                    <div class="edit-banner hidden" id="blipEditBanner">
+                        ✏️ Editing existing blip
+                        <button id="blipCancelEditBtn" class="mini-btn">✕ Cancel</button>
+                    </div>
+
+                    <div class="field">
+                        <label>Position Offset (m)
+                            <button id="blipResetOffsetBtn" class="mini-btn" title="Snap back to your current position">↺ My position</button>
+                        </label>
+                        <div class="offset-row">
+                            <div class="offset-item"><span>X</span><input type="number" id="blipOffX" step="0.25" value="0"></div>
+                            <div class="offset-item"><span>Y</span><input type="number" id="blipOffY" step="0.25" value="0"></div>
+                            <div class="offset-item"><span>Z</span><input type="number" id="blipOffZ" step="0.25" value="0"></div>
+                        </div>
+                        <div class="offset-hint">Arrow keys nudge X/Y, Q/E nudge Z • hold Shift for a bigger step</div>
+                    </div>
+
+                    <div class="field">
+                        <label>Blip Color</label>
+                        <select id="blipColorSelect"></select>
+                    </div>
+
+                    <div class="field">
+                        <label>Scale: <span id="blipScaleVal">1.0</span></label>
+                        <div class="slider-num-row">
+                            <input type="range" id="blipScale" min="0.1" max="3" step="0.1" value="1.0">
+                            <input type="number" id="blipScaleNum" min="0.1" step="0.1" value="1.0" class="num-input">
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label>Heading: <span id="blipHeadingVal">0°</span></label>
+                        <div class="slider-num-row">
+                            <input type="range" id="blipHeading" min="0" max="359" step="1" value="0">
+                            <input type="number" id="blipHeadingNum" min="0" max="359" step="1" value="0" class="num-input">
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label>Label (name on map)</label>
+                        <input type="text" id="blipLabel" placeholder="e.g. DZ Store">
+                    </div>
+
+                    <div class="btn-row">
+                        <button id="spawnBlipBtn" class="btn btn-primary">➕ Add to Map</button>
+                        <button id="copyBlipBtn" class="btn btn-secondary">📋 Copy Code</button>
+                    </div>
+
+                    <div class="code-preview" id="blipCodePreview"></div>
+                </div>
+            </div>
+
+            <!-- ============ MARKERS TAB ============ -->
+            <div class="tab-content" id="tab-markers">
+                <div class="col col-list">
+                    <input type="text" id="markerSearch" placeholder="Search markers..." class="search-input">
+                    <div id="markerList" class="item-list"></div>
+                </div>
+
+                <div class="col col-preview">
+                    <div class="preview-box">
+                        <div id="markerPreviewIcon" class="preview-icon marker-icon">◆</div>
+                        <div class="preview-col">
+                            <div class="preview-name" id="markerSelectedName">No marker selected</div>
+                            <div class="live-badge" id="markerLiveBadge"><span class="live-dot"></span>Live preview in-game</div>
+                        </div>
+                    </div>
+
+                    <div class="edit-banner hidden" id="markerEditBanner">
+                        ✏️ Editing existing marker
+                        <button id="markerCancelEditBtn" class="mini-btn">✕ Cancel</button>
+                    </div>
+
+                    <div class="field">
+                        <label>Position Offset (m)
+                            <button id="markerResetOffsetBtn" class="mini-btn" title="Snap back to your current position">↺ My position</button>
+                        </label>
+                        <div class="offset-row">
+                            <div class="offset-item"><span>X</span><input type="number" id="markerOffX" step="0.25" value="0"></div>
+                            <div class="offset-item"><span>Y</span><input type="number" id="markerOffY" step="0.25" value="0"></div>
+                            <div class="offset-item"><span>Z</span><input type="number" id="markerOffZ" step="0.25" value="0"></div>
+                        </div>
+                        <div class="offset-hint">Arrow keys nudge X/Y, Q/E nudge Z • hold Shift for a bigger step</div>
+                    </div>
+
+                    <div class="field">
+                        <label>Marker Color (RGBA)</label>
+                        <div class="rgba-row">
+                            <div class="rgba-item">
+                                <input type="range" id="markerR" min="0" max="255" value="255" class="rgba-slider r">
+                                <input type="number" id="markerRNum" min="0" max="255" value="255" class="num-input num-input-sm">
+                            </div>
+                            <div class="rgba-item">
+                                <input type="range" id="markerG" min="0" max="255" value="0" class="rgba-slider g">
+                                <input type="number" id="markerGNum" min="0" max="255" value="0" class="num-input num-input-sm">
+                            </div>
+                            <div class="rgba-item">
+                                <input type="range" id="markerB" min="0" max="255" value="255" class="rgba-slider b">
+                                <input type="number" id="markerBNum" min="0" max="255" value="255" class="num-input num-input-sm">
+                            </div>
+                            <div class="rgba-item">
+                                <input type="range" id="markerA" min="0" max="255" value="150" class="rgba-slider a">
+                                <input type="number" id="markerANum" min="0" max="255" value="150" class="num-input num-input-sm">
+                            </div>
+                        </div>
+                        <div id="markerColorPreview" class="color-preview"></div>
+                    </div>
+
+                    <div class="field">
+                        <label>Scale: <span id="markerScaleVal">1.0</span></label>
+                        <div class="slider-num-row">
+                            <input type="range" id="markerScale" min="0.1" max="5" step="0.1" value="1.0">
+                            <input type="number" id="markerScaleNum" min="0.1" step="0.1" value="1.0" class="num-input">
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label>Fine-tune Size (X / Y / Z)</label>
+                        <div class="dim-row">
+                            <input type="number" id="markerScaleX" value="1.0" step="0.1">
+                            <input type="number" id="markerScaleY" value="1.0" step="0.1">
+                            <input type="number" id="markerScaleZ" value="1.0" step="0.1">
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label>Heading: <span id="markerHeadingVal">0°</span></label>
+                        <div class="slider-num-row">
+                            <input type="range" id="markerHeading" min="0" max="359" step="1" value="0">
+                            <input type="number" id="markerHeadingNum" min="0" max="359" step="1" value="0" class="num-input">
+                        </div>
+                    </div>
+
+                    <div class="btn-row">
+                        <button id="spawnMarkerBtn" class="btn btn-primary">➕ Add to Map</button>
+                        <button id="copyMarkerBtn" class="btn btn-secondary">📋 Copy Code</button>
+                    </div>
+
+                    <div class="code-preview" id="markerCodePreview"></div>
+                </div>
+            </div>
+
+            <!-- ============ CHECKPOINTS TAB ============ -->
+            <div class="tab-content" id="tab-checkpoints">
+                <div class="col col-list">
+                    <input type="text" id="checkpointSearch" placeholder="Search checkpoints..." class="search-input">
+                    <div id="checkpointList" class="item-list"></div>
+                </div>
+
+                <div class="col col-preview">
+                    <div class="preview-box">
+                        <div id="checkpointPreviewIcon" class="preview-icon">◎</div>
+                        <div class="preview-col">
+                            <div class="preview-name" id="checkpointSelectedName">No checkpoint selected</div>
+                            <div class="live-badge" id="checkpointLiveBadge"><span class="live-dot"></span>Live preview in-game</div>
+                        </div>
+                    </div>
+
+                    <div class="edit-banner hidden" id="checkpointEditBanner">
+                        ✏️ Editing existing checkpoint
+                        <button id="checkpointCancelEditBtn" class="mini-btn">✕ Cancel</button>
+                    </div>
+
+                    <div class="field">
+                        <label>Position Offset (m)
+                            <button id="checkpointResetOffsetBtn" class="mini-btn" title="Snap back to your current position">↺ My position</button>
+                        </label>
+                        <div class="offset-row">
+                            <div class="offset-item"><span>X</span><input type="number" id="checkpointOffX" step="0.25" value="0"></div>
+                            <div class="offset-item"><span>Y</span><input type="number" id="checkpointOffY" step="0.25" value="0"></div>
+                            <div class="offset-item"><span>Z</span><input type="number" id="checkpointOffZ" step="0.25" value="0"></div>
+                        </div>
+                        <div class="offset-hint">Arrow keys nudge X/Y, Q/E nudge Z • hold Shift for a bigger step</div>
+                    </div>
+
+                    <div class="field">
+                        <label>Checkpoint Color (RGBA)</label>
+                        <div class="rgba-row">
+                            <div class="rgba-item">
+                                <input type="range" id="checkpointR" min="0" max="255" value="255" class="rgba-slider r">
+                                <input type="number" id="checkpointRNum" min="0" max="255" value="255" class="num-input num-input-sm">
+                            </div>
+                            <div class="rgba-item">
+                                <input type="range" id="checkpointG" min="0" max="255" value="0" class="rgba-slider g">
+                                <input type="number" id="checkpointGNum" min="0" max="255" value="0" class="num-input num-input-sm">
+                            </div>
+                            <div class="rgba-item">
+                                <input type="range" id="checkpointB" min="0" max="255" value="255" class="rgba-slider b">
+                                <input type="number" id="checkpointBNum" min="0" max="255" value="255" class="num-input num-input-sm">
+                            </div>
+                            <div class="rgba-item">
+                                <input type="range" id="checkpointA" min="0" max="255" value="150" class="rgba-slider a">
+                                <input type="number" id="checkpointANum" min="0" max="255" value="150" class="num-input num-input-sm">
+                            </div>
+                        </div>
+                        <div id="checkpointColorPreview" class="color-preview"></div>
+                    </div>
+
+                    <div class="field">
+                        <label>Radius: <span id="checkpointRadiusVal">5.0</span></label>
+                        <div class="slider-num-row">
+                            <input type="range" id="checkpointRadius" min="0.5" max="30" step="0.5" value="5.0">
+                            <input type="number" id="checkpointRadiusNum" min="0.1" step="0.5" value="5.0" class="num-input">
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label>Heading (arrow direction): <span id="checkpointHeadingVal">0°</span></label>
+                        <div class="slider-num-row">
+                            <input type="range" id="checkpointHeading" min="0" max="359" step="1" value="0">
+                            <input type="number" id="checkpointHeadingNum" min="0" max="359" step="1" value="0" class="num-input">
+                        </div>
+                    </div>
+
+                    <div class="btn-row">
+                        <button id="spawnCheckpointBtn" class="btn btn-primary">➕ Add to Map</button>
+                        <button id="copyCheckpointBtn" class="btn btn-secondary">📋 Copy Code</button>
+                    </div>
+
+                    <div class="code-preview" id="checkpointCodePreview"></div>
+                </div>
+            </div>
+
+            <!-- ============ ACTIVE ITEMS TAB ============ -->
+            <div class="tab-content" id="tab-active">
+                <div class="active-header">
+                    <span>Saved on this server (synced to everyone)</span>
+                    <button id="clearAllBtn" class="btn btn-danger">🗑 Clear All</button>
+                </div>
+                <div id="activeList" class="active-list"></div>
+
+                <div class="btn-row" style="margin-top:14px;">
+                    <button id="exportBtn" class="btn btn-primary">💾 Export All to File</button>
+                    <button id="copyExportBtn" class="btn btn-secondary">📋 Copy Exported Code</button>
+                </div>
+                <div class="code-preview" id="exportCodePreview"></div>
+            </div>
+
+        </div>
+
+        <div class="footer">
+            <span class="keys"><span class="kbd">F6</span> open menu</span>
+            <span class="live"><span class="dot"></span>DZ-BlipCreator • v6ehsan</span>
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="script.js?v=2.5.0"></script>
+</body>
+</html>
