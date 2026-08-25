@@ -1,0 +1,535 @@
+/* ============================================================<DZ/>
+   DZ-BlipCreator — Stylesheet
+   Author  : v6ehsan
+   Version : 2.0.0  (Vice Horizon theme — matches DZ-Coords)
+   <DZ/>============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Rajdhani:wght@600;700&family=JetBrains+Mono:wght@500;600&display=swap');
+
+/* ── Palette ─────────────────────────────────────────────────<DZ/>
+   Vice-Horizon: deep royal purple fading into hot pink/magenta,
+   same system as DZ-Coords, so both tools feel like one product.
+   #8A2BE2  royal purple
+   #FF2FC0  hot pink / magenta
+   #FFFFFF  white (logo / accents / text)
+   #0C0716  night-sky base
+   <DZ/>============================================================ */
+:root{
+    --purple: #8A2BE2;
+    --pink: #FF2FC0;
+    --bg-panel: rgba(15, 9, 28, 0.82);
+    --border-glow: rgba(255,255,255,.14);
+    --text-main: #ffffff;
+    --text-dim: rgba(255,255,255,.55);
+    --danger: #ef4444;
+    --success: #22c55e;
+}
+
+*{ box-sizing: border-box; margin:0; padding:0; font-family:'Rajdhani','Segoe UI',system-ui,-apple-system,sans-serif; user-select:none; }
+
+html, body{
+    width:100%; height:100%;
+    background: transparent;
+    overflow:hidden;
+}
+
+.hidden{ display:none !important; }
+
+/* ============================================================<DZ/>
+   WRAPPER  (#app)
+   Full-screen overlay with two animated ambient "orbs" — purple
+   and pink — drifting behind the modal, echoing the GTA VI-style
+   sky gradient. Same recipe as DZ-Coords' .dz-wrap.
+   <DZ/>============================================================ */
+#app{
+    position:fixed;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    padding-right: 3vw;
+    /* No full-screen dim here on purpose - the whole point of live preview
+       is seeing your blip/marker/checkpoint out in the world while you
+       adjust it, so nothing should darken or block that view. */
+    background: transparent;
+    pointer-events:none;
+}
+#app > *{ pointer-events:auto; }
+
+#app::before,
+#app::after{
+    content:'';
+    position:fixed;
+    border-radius:50%;
+    pointer-events:none;
+    filter: blur(110px);
+    opacity:.55;
+    animation: dzOrb 8s ease-in-out infinite;
+}
+#app::before{
+    width:420px; height:420px;
+    right:0; top:14%;
+    background: radial-gradient(circle, rgba(138,43,226,.22) 0%, transparent 70%);
+    animation-delay:0s;
+}
+#app::after{
+    width:380px; height:380px;
+    right:120px; bottom:10%;
+    background: radial-gradient(circle, rgba(255,47,192,.18) 0%, transparent 70%);
+    animation-delay:-4s;
+}
+@keyframes dzOrb{
+    0%,100%{ transform: translate(0,0) scale(1); }
+    50%{ transform: translate(-15px,-25px) scale(1.15); }
+}
+
+/* ============================================================<DZ/>
+   MODAL  (.wrapper)
+   Frosted night-sky panel with a purple-into-pink gradient
+   border glow, matching DZ-Coords' .dz-modal.
+   <DZ/>============================================================ */
+.wrapper{
+    position:relative;
+    width: 820px;
+    height: 620px;
+    max-height: 86vh;
+    background: var(--bg-panel);
+    border-radius: 22px;
+    border: 1px solid var(--border-glow) !important;
+    outline:none !important;
+    box-shadow:
+        0 20px 60px rgba(0,0,0,.55),
+        0 0 0 1px rgba(255,47,192,.18),
+        0 0 45px rgba(138,43,226,.16);
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    animation: dzPopSide .45s cubic-bezier(.16,1,.3,1) both;
+}
+
+/* Subtle glass highlight overlaid on the card */
+.wrapper::before{
+    content:'';
+    position:absolute; inset:0;
+    background: linear-gradient(135deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.02) 35%, transparent 65%);
+    pointer-events:none;
+    z-index:0;
+}
+
+@keyframes dzPop{
+    from{ opacity:0; transform: translateY(20px) scale(.96); }
+    to{ opacity:1; transform: translateY(0) scale(1); }
+}
+
+@keyframes dzPopSide{
+    from{ opacity:0; transform: translateX(30px) scale(.97); }
+    to{ opacity:1; transform: translateX(0) scale(1); }
+}
+
+/* ============================================================<DZ/>
+   SHIMMER BAR (.shimmer)
+   3px animated purple → white → pink sweep at the very top.
+   <DZ/>============================================================ */
+.shimmer{
+    position:relative; z-index:2; height:3px; flex-shrink:0;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        #8A2BE2 20%,
+        #FFFFFF 50%,
+        #FF2FC0 80%,
+        transparent 100%);
+    background-size: 200% 100%;
+    animation: dzShim 4s linear infinite;
+}
+@keyframes dzShim{
+    from{ background-position: 200% 0; }
+    to{ background-position: -200% 0; }
+}
+
+/* ============================================================<DZ/>
+   HEADER
+   Logo tile | brand + tabs | close button
+   <DZ/>============================================================ */
+.header{
+    position:relative; z-index:1;
+    display:flex;
+    align-items:center;
+    gap:16px;
+    padding: 16px 24px 14px;
+    flex-shrink:0;
+}
+
+/* ── Logo tile ───────────────────────────────────────────────*/
+.logo{ position:relative; width:48px; height:48px; flex-shrink:0; }
+.logo-inner{
+    width:48px; height:48px;
+    border-radius:14px;
+    background: linear-gradient(160deg, rgba(138,43,226,.7), rgba(255,47,192,.55));
+    border: 1px solid rgba(255,255,255,.35) !important;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+}
+.logo-img{ width:36px; height:36px; object-fit:contain; position:relative; z-index:1; }
+.logo-dot{
+    position:absolute;
+    width:10px; height:10px;
+    border-radius:50%;
+    background:#FFFFFF;
+    box-shadow: 0 0 8px rgba(255,255,255,.9);
+    bottom:-2px; right:-2px;
+    animation: dzDot 2s ease-in-out infinite;
+}
+@keyframes dzDot{
+    0%,100%{ transform:scale(1); opacity:.85; }
+    50%{ transform:scale(1.3); opacity:1; }
+}
+
+.brand{ display:flex; flex-direction:column; gap:4px; }
+.brand-title{
+    font-family:'Poppins','Rajdhani',sans-serif;
+    font-size:20px; font-weight:800; color:#fff; letter-spacing:.3px;
+}
+.brand-title .accent{
+    background: linear-gradient(90deg, #8A2BE2, #FF2FC0);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}
+.brand-sub{
+    font-size:11px; font-weight:600; color: var(--text-dim);
+    letter-spacing:2px; text-transform:uppercase;
+}
+
+.tabs{ display:flex; gap:6px; background: rgba(0,0,0,0.25); padding:4px; border-radius:10px; margin-inline-start:auto; }
+.tab-btn{
+    border:none; background:transparent; color: var(--text-dim);
+    padding: 8px 16px; border-radius:8px; cursor:pointer;
+    font-family:'Rajdhani',sans-serif; font-size:14px; font-weight:700;
+    transition: all .15s ease;
+}
+.tab-btn:hover{ color:#fff; }
+.tab-btn.active{
+    background: linear-gradient(120deg, #8A2BE2, #FF2FC0);
+    color:#fff;
+    box-shadow: 0 0 14px rgba(255,47,192,.45);
+}
+
+.close-btn{
+    width:36px; height:36px; border-radius:10px;
+    background: rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.12) !important;
+    color: rgba(255,255,255,.6); cursor:pointer; font-size:16px;
+    transition: all .2s;
+}
+.close-btn:hover{ background: rgba(255,47,192,.25); border-color: rgba(255,47,192,.55) !important; color:#fff; }
+
+/* ============================================================<DZ/>
+   DIVIDER
+   <DZ/>============================================================ */
+.divider{
+    height:1px; flex-shrink:0;
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(138,43,226,.45) 20%,
+        rgba(255,255,255,.6) 50%,
+        rgba(255,47,192,.45) 80%,
+        transparent);
+}
+
+/* ============================================================<DZ/>
+   BODY
+   <DZ/>============================================================ */
+.body{ position:relative; z-index:1; flex:1; min-height:0; overflow:hidden; padding: 18px 24px; }
+.tab-content{ display:none; height:100%; min-height:0; gap:18px; }
+.tab-content.active{ display:flex; }
+
+.col-list{ width: 40%; display:flex; flex-direction:column; min-height:0; gap:10px; }
+.col-preview{ width: 60%; display:flex; flex-direction:column; min-height:0; gap:14px; overflow-y:auto; padding-inline-end:4px; }
+
+.search-input{
+    width:100%; padding:10px 12px; border-radius:10px;
+    border:1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.05); color:#fff; font-family:'Rajdhani',sans-serif; font-size:14px; font-weight:600; outline:none;
+}
+.search-input:focus{ border-color: rgba(255,47,192,.55); box-shadow: 0 0 0 3px rgba(255,47,192,.15); }
+
+.item-list{
+    flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:6px;
+    border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:10px;
+    background: rgba(255,255,255,.03);
+}
+
+.item-cat{
+    font-size:11px; font-weight:700; color: rgba(255,255,255,.55); padding:8px 8px 4px;
+    text-transform:uppercase; letter-spacing:2px;
+}
+
+.item-row{
+    display:flex; align-items:center; gap:12px; padding:10px; border-radius:12px;
+    cursor:pointer; transition: all .2s ease; font-size:14px; font-weight:600; color: var(--text-main);
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.06);
+}
+.item-row:hover{
+    background: linear-gradient(90deg, rgba(138,43,226,.16), rgba(255,47,192,.12));
+    border-color: rgba(255,255,255,.2);
+    transform: translateX(4px);
+}
+.item-row.selected{
+    background: rgba(255,255,255,.12);
+    box-shadow: inset 0 0 0 1px rgba(255,47,192,.4);
+}
+.item-row .item-id{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px; color: var(--text-dim); background: rgba(0,0,0,0.3);
+    padding:2px 6px; border-radius:6px; min-width:32px; text-align:center;
+}
+.item-id-badge{
+    width:42px; height:42px; flex-shrink:0; border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Poppins','Rajdhani',sans-serif; font-size:13px; font-weight:800; color:#fff;
+    background: linear-gradient(160deg, rgba(138,43,226,.55), rgba(255,47,192,.4));
+    border: 1px solid rgba(255,255,255,.18);
+}
+.item-id-badge-lg{
+    width:100%; height:100%; border-radius:16px; font-size:22px;
+}
+.item-thumb{
+    width:42px; height:42px; object-fit:contain; flex-shrink:0;
+    filter: drop-shadow(0 0 3px rgba(255,47,192,.6));
+    background: rgba(0,0,0,0.25); border-radius:8px; padding:4px;
+}
+.item-emoji{
+    width:42px; height:42px; display:flex; align-items:center; justify-content:center;
+    font-size:22px; flex-shrink:0; background: rgba(0,0,0,0.25); border-radius:8px;
+}
+.animated-badge{
+    margin-left:auto; font-family:'JetBrains Mono',monospace;
+    font-size:10px; font-weight:800; letter-spacing:1px; color:#fff;
+    background: linear-gradient(90deg, #ff2fc0, #8a2be2);
+    padding:2px 7px; border-radius:8px; flex-shrink:0;
+    box-shadow: 0 0 6px rgba(255,47,192,.5);
+}
+.preview-img{
+    width:100%; height:100%; object-fit:contain; padding:6px;
+    filter: drop-shadow(0 0 4px rgba(255,255,255,0.5));
+}
+
+/* ============================================================<DZ/>
+   PREVIEW
+   <DZ/>============================================================ */
+.preview-box{
+    display:flex; align-items:center; gap:14px; padding:18px;
+    background: radial-gradient(circle at 30% 30%, rgba(138,43,226,.22), rgba(0,0,0,0.3));
+    border:1px solid rgba(255,255,255,.14); border-radius:16px;
+}
+.preview-icon{
+    width:92px; height:92px; border-radius:16px; display:flex; align-items:center; justify-content:center;
+    font-size:22px; font-weight:800; color:#fff;
+    background: linear-gradient(160deg, rgba(138,43,226,.7), rgba(255,47,192,.55));
+    border: 1px solid rgba(255,255,255,.3);
+    flex-shrink:0;
+    overflow:hidden;
+}
+.preview-icon.marker-icon{ border-radius:16px; }
+.preview-col{ display:flex; flex-direction:column; gap:6px; }
+.preview-name{ font-family:'Poppins',sans-serif; font-size:15px; font-weight:700; color:#fff; }
+
+.live-badge{
+    display:inline-flex; align-items:center; gap:6px; width:fit-content;
+    font-family:'Rajdhani',sans-serif; font-size:11px; font-weight:700; letter-spacing:.3px;
+    color: var(--text-dim); padding:3px 9px 3px 7px; border-radius:20px;
+    background: rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);
+    opacity:0; transform: translateY(-2px); transition: all .2s ease;
+}
+.live-badge.active{
+    opacity:1; transform:translateY(0);
+    color:#fff; background: rgba(92,255,143,.12); border-color: rgba(92,255,143,.35);
+}
+.live-dot{
+    width:6px; height:6px; border-radius:50%; background: var(--text-dim); flex-shrink:0;
+}
+.live-badge.active .live-dot{
+    background:#5cff8f; box-shadow: 0 0 6px #5cff8f;
+    animation: livePulse 1.4s ease-in-out infinite;
+}
+@keyframes livePulse{
+    0%, 100%{ opacity:1; }
+    50%{ opacity:.35; }
+}
+
+.field{ display:flex; flex-direction:column; gap:6px; }
+.field label{ font-size:12px; color: var(--text-dim); font-weight:600; }
+.field select, .field input[type="text"]{
+    padding:9px 10px; border-radius:10px; border:1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.05); color:#fff; font-family:'Rajdhani',sans-serif; font-size:14px; font-weight:600; outline:none;
+}
+.field select:focus, .field input:focus{ border-color: rgba(255,47,192,.55); }
+
+input[type="range"]{
+    -webkit-appearance:none; width:100%; height:6px; border-radius:4px;
+    background: rgba(255,255,255,0.1); outline:none;
+}
+input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+    background: linear-gradient(135deg, #8A2BE2, #FF2FC0); cursor:pointer; box-shadow: 0 0 8px rgba(255,47,192,.7);
+}
+
+.rgba-row{ display:flex; flex-direction:column; gap:6px; }
+.rgba-item{ display:flex; align-items:center; gap:8px; }
+.rgba-item input[type="range"]{ flex:1; }
+.rgba-slider.r::-webkit-slider-thumb{ background:#ff5c5c; }
+.rgba-slider.g::-webkit-slider-thumb{ background:#5cff8f; }
+.rgba-slider.b::-webkit-slider-thumb{ background:#8f5cff; }
+.rgba-slider.a::-webkit-slider-thumb{ background:#ffffff; }
+
+.slider-num-row{ display:flex; align-items:center; gap:8px; }
+.slider-num-row input[type="range"]{ flex:1; }
+.num-input{
+    width:64px; flex-shrink:0; padding:7px 6px; border-radius:10px;
+    border:1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05);
+    color:#fff; font-family:'JetBrains Mono',monospace; font-size:12px; text-align:center; outline:none;
+}
+.num-input:focus{ border-color: rgba(255,47,192,.55); }
+.num-input-sm{ width:48px; }
+
+.color-preview{
+    width:100%; height:30px; border-radius:10px; margin-top:4px;
+    border:1px solid rgba(255,255,255,0.15);
+}
+
+.dim-row{ display:flex; gap:8px; }
+.dim-row input{
+    flex:1; padding:8px; border-radius:10px; border:1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.05); color:#fff; font-family:'JetBrains Mono',monospace; text-align:center;
+}
+
+.btn-row{ display:flex; gap:10px; }
+.btn{
+    flex:1; padding:12px; border:none; border-radius:12px; cursor:pointer;
+    font-family:'Rajdhani',sans-serif; font-size:14px; font-weight:700; transition: all .2s ease;
+}
+.btn-primary{
+    background: linear-gradient(120deg, #8A2BE2, #FF2FC0); color:#fff;
+    box-shadow: 0 0 16px rgba(255,47,192,.4);
+}
+.btn-primary:hover{ transform: translateY(-1px); box-shadow: 0 0 22px rgba(255,47,192,.6); }
+.btn-secondary{
+    background: rgba(255,255,255,0.06); color:#fff; border:1px solid rgba(255,255,255,.16);
+}
+.btn-secondary:hover{ background: rgba(255,255,255,0.12); }
+.btn-danger{
+    background: rgba(239,68,68,0.15); color:#ff8080; border:1px solid rgba(239,68,68,0.4);
+    padding:8px 14px; flex:none;
+}
+.btn-danger:hover{ background: rgba(239,68,68,0.3); }
+
+.code-preview{
+    background: rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,.12); border-radius:12px;
+    padding:12px; font-family: 'JetBrains Mono', monospace; font-size:11px; color: rgba(255,255,255,.85);
+    white-space:pre-wrap; direction:ltr; text-align:left; max-height:150px; overflow-y:auto;
+}
+
+/* ============================================================<DZ/>
+   ACTIVE ITEMS
+   <DZ/>============================================================ */
+.active-header{
+    display:flex; align-items:center; justify-content:space-between;
+    width:100%; margin-bottom:10px; color: var(--text-dim); font-size:14px; font-weight:600;
+}
+.active-list{
+    width:100%; display:flex; flex-direction:column; gap:8px; overflow-y:auto; max-height:460px;
+}
+.active-item{
+    display:flex; align-items:center; justify-content:space-between; padding:12px 14px;
+    background: rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); border-radius:12px;
+    font-size:14px; font-weight:600; color:#fff;
+    transition: all .2s ease;
+}
+.active-item:hover{
+    background: linear-gradient(90deg, rgba(138,43,226,.14), rgba(255,47,192,.1));
+}
+.active-item .meta{ color: var(--text-dim); font-size:11px; font-weight:500; }
+.active-item-btns{ display:flex; gap:6px; flex-shrink:0; }
+.edit-btn{
+    background: rgba(138,43,226,.15); border:1px solid rgba(138,43,226,.4); color:#d7b2ff;
+    border-radius:8px; padding:5px 10px; cursor:pointer; font-size:11px; font-weight:700;
+}
+.edit-btn:hover{ background: rgba(138,43,226,.35); }
+.remove-btn{
+    background: rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ff8080;
+    border-radius:8px; padding:5px 10px; cursor:pointer; font-size:11px; font-weight:700;
+}
+.remove-btn:hover{ background: rgba(239,68,68,0.35); }
+.empty-state{ color: var(--text-dim); text-align:center; padding:30px; font-size:14px; }
+
+/* ---- Edit mode banner ---- */
+.edit-banner{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:8px 12px; border-radius:10px; font-size:12px; font-weight:700; color:#d7b2ff;
+    background: rgba(138,43,226,.14); border:1px solid rgba(138,43,226,.4);
+}
+.edit-banner.hidden{ display:none; }
+
+.mini-btn{
+    background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.16); color: var(--text-dim);
+    border-radius:8px; padding:3px 9px; cursor:pointer; font-size:10px; font-weight:700; letter-spacing:.2px;
+    white-space:nowrap;
+}
+.mini-btn:hover{ background: rgba(255,255,255,.14); color:#fff; }
+
+/* ---- Position offset controls ---- */
+.field label .mini-btn{ float:right; }
+.offset-row{ display:flex; gap:8px; }
+.offset-item{
+    flex:1; display:flex; align-items:center; gap:6px;
+    background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); border-radius:10px; padding:4px 8px;
+}
+.offset-item span{ font-size:11px; font-weight:700; color: var(--text-dim); }
+.offset-item input{
+    width:100%; border:none; background:transparent; color:#fff;
+    font-family:'JetBrains Mono',monospace; font-size:12px; text-align:right; outline:none;
+}
+.offset-hint{ font-size:10px; color: var(--text-dim); opacity:.75; }
+
+/* ============================================================<DZ/>
+   FOOTER
+   <DZ/>============================================================ */
+.footer{
+    position:relative; z-index:1; flex-shrink:0;
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 12px 24px;
+    background: rgba(255,255,255,.03); border-top:1px solid rgba(255,255,255,.08);
+}
+.keys{ font-size:11px; color: var(--text-dim); }
+.kbd{
+    display:inline-block; border-radius:5px; background: rgba(255,255,255,.1);
+    padding:2px 8px; color: rgba(255,255,255,.7); font-family:'JetBrains Mono',monospace; font-size:10px;
+}
+.live{
+    display:flex; align-items:center; gap:6px;
+    font-size:11px; font-weight:600; letter-spacing:.4px; color: rgba(255,255,255,.65);
+}
+.dot{
+    width:6px; height:6px; border-radius:50%;
+    background:#FF2FC0; box-shadow: 0 0 6px rgba(255,47,192,.85);
+    animation: dzLive 2s ease-in-out infinite;
+}
+@keyframes dzLive{ 0%,100%{ opacity:.5; } 50%{ opacity:1; } }
+
+/* ============================================================<DZ/>
+   SCROLLBAR
+   <DZ/>============================================================ */
+::-webkit-scrollbar{ width:6px; }
+::-webkit-scrollbar-track{ background:transparent; }
+::-webkit-scrollbar-thumb{ background: linear-gradient(180deg, rgba(138,43,226,.5), rgba(255,47,192,.5)); border-radius:6px; }
+
+/* ============================================================<DZ/>
+   TOAST
+   <DZ/>============================================================ */
+.toast{
+    position:fixed; bottom:30px; left:50%; transform: translateX(-50%) translateY(20px);
+    background: linear-gradient(120deg, #8A2BE2, #FF2FC0);
+    color:#fff; padding:10px 20px; border-radius:12px; font-size:13px; font-weight:700;
+    box-shadow: 0 0 20px rgba(255,47,192,.5); opacity:0; pointer-events:none;
+    transition: all .25s ease; z-index:999;
+}
+.toast.show{ opacity:1; transform: translateX(-50%) translateY(0); }
