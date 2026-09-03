@@ -1,5 +1,11 @@
 # 🚀 DZ-BlipCreator v1.0.0
 
+BETA — In Development
+
+⚠️ This resource is currently in Beta.
+Bugs, unexpected behavior, and compatibility issues may occur.
+Please report any bugs through the Issues section.
+
 ### Advanced Blip, Marker & Checkpoint Editor for FiveM
 
 <p align="center">
