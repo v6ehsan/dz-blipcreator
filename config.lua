@@ -3,6 +3,13 @@ Config = {}
 -- Menu open key (default: F6)
 Config.OpenKey = 'F6'
 
+-- Show debug prints and register the /dztestcheckpoint and /dztestcp test
+-- commands. Keep false on a live server.
+Config.Debug = false
+
+-- Maximum number of saved blips + markers + checkpoints (anti-abuse cap).
+Config.MaxPoints = 500
+
 -- ================= PERSISTENCE =================
 -- Every blip/marker/checkpoint created through the menu is saved server-side
 -- to this JSON file (via SaveResourceFile) and reloaded automatically when
