@@ -16,6 +16,14 @@ local function request(eventName, payload, cb)
     local reqId = reqCounter
     pendingRequests[reqId] = cb
     TriggerServerEvent(eventName, reqId, payload)
+    -- never leave a NUI callback hanging if the server doesn't answer
+    SetTimeout(10000, function()
+        local pending = pendingRequests[reqId]
+        if pending then
+            pendingRequests[reqId] = nil
+            pending(nil)
+        end
+    end)
 end
 
 RegisterNetEvent('dzblip:client:requestResult')
@@ -53,7 +61,7 @@ local function applyPoint(point)
         SetBlipRotation(blip, math.floor(tonumber(d.heading) or 0))
         SetBlipAsShortRange(blip, false)
         BeginTextCommandSetBlipName('STRING')
-        AddTextComponentSubstringPlayerName(d.label ~= '' and d.label or (d.typeName or 'DZ Blip'))
+        AddTextComponentSubstringPlayerName((d.label and d.label ~= '' and d.label) or (d.typeName and d.typeName ~= '' and d.typeName) or 'DZ Blip')
         EndTextCommandSetBlipName(blip)
         activeBlips[uid] = { handle = blip, data = d }
 
@@ -77,8 +85,8 @@ local function applyPoint(point)
         -- CreateCheckpoint alone leaves the cylinder height at 0, which makes
         -- the checkpoint invisible even though it was created successfully.
         SetCheckpointCylinderHeight(handle, 2.0, 2.0, radius)
-        print(('[dz-blipcreator] checkpoint %s created: handle=%s type=%s pos=%.2f,%.2f,%.2f radius=%.1f rgba=%s,%s,%s,%s')
-            :format(uid, tostring(handle), tostring(d.checkpointType), cx, cy, cz, radius, r, g, b, a))
+        if Config.Debug then print(('[dz-blipcreator] checkpoint %s created: handle=%s type=%s pos=%.2f,%.2f,%.2f radius=%.1f rgba=%s,%s,%s,%s')
+            :format(uid, tostring(handle), tostring(d.checkpointType), cx, cy, cz, radius, r, g, b, a)) end
         activeCheckpoints[uid] = { handle = handle, data = d }
     end
 end
@@ -147,16 +155,26 @@ end
 RegisterNetEvent('dzblip:client:pointCreated')
 AddEventHandler('dzblip:client:pointCreated', function(point)
     applyPoint(point)
+    if menuOpen then SendNUIMessage({ action = 'pointCreated', point = point }) end
+end)
+
+RegisterNetEvent('dzblip:client:pointUpdated')
+AddEventHandler('dzblip:client:pointUpdated', function(point)
+    removePointLocal(point.uid)
+    applyPoint(point)
+    if menuOpen then SendNUIMessage({ action = 'pointUpdated', point = point }) end
 end)
 
 RegisterNetEvent('dzblip:client:pointRemoved')
 AddEventHandler('dzblip:client:pointRemoved', function(uid)
     removePointLocal(uid)
+    if menuOpen then SendNUIMessage({ action = 'pointRemoved', uid = uid }) end
 end)
 
 RegisterNetEvent('dzblip:client:clearAll')
 AddEventHandler('dzblip:client:clearAll', function()
     clearAllLocal()
+    if menuOpen then SendNUIMessage({ action = 'syncActive', points = {} }) end
 end)
 
 -- Sent only to this client: the full saved list, applied fresh every time
@@ -236,6 +254,7 @@ RegisterKeyMapping('dzblip', 'Open DZ-BlipCreator menu', 'keyboard', Config.Open
 -- build, a conflicting resource, streaming) and not something in
 -- DZ-BlipCreator's code - which tells us exactly where to look next.
 local testCheckpoint = nil
+if Config.Debug then
 RegisterCommand('dztestcheckpoint', function()
     if testCheckpoint then
         DeleteCheckpoint(testCheckpoint)
@@ -290,6 +309,7 @@ RegisterCommand('dztestcp', function(_, args)
     AddTextComponentSubstringPlayerName('~y~Type ' .. id .. ' spawned - what does it look like?')
     EndTextCommandThefeedPostTicker(false, false)
 end, false)
+end -- Config.Debug
 
 -- ============ NUI CALLBACKS ============
 
@@ -311,7 +331,7 @@ RegisterNUICallback('createBlip', function(data, cb)
 end)
 
 RegisterNUICallback('removeBlip', function(data, cb)
-    request('dzblip:server:removePoint', data, function(result) cb(result or 'ok') end)
+    request('dzblip:server:removePoint', data, function(result) cb(result or { error = 'unknown' }) end)
 end)
 
 RegisterNUICallback('createMarker', function(data, cb)
@@ -321,7 +341,7 @@ RegisterNUICallback('createMarker', function(data, cb)
 end)
 
 RegisterNUICallback('removeMarker', function(data, cb)
-    request('dzblip:server:removePoint', data, function(result) cb(result or 'ok') end)
+    request('dzblip:server:removePoint', data, function(result) cb(result or { error = 'unknown' }) end)
 end)
 
 RegisterNUICallback('createCheckpoint', function(data, cb)
@@ -331,11 +351,17 @@ RegisterNUICallback('createCheckpoint', function(data, cb)
 end)
 
 RegisterNUICallback('removeCheckpoint', function(data, cb)
-    request('dzblip:server:removePoint', data, function(result) cb(result or 'ok') end)
+    request('dzblip:server:removePoint', data, function(result) cb(result or { error = 'unknown' }) end)
 end)
 
 RegisterNUICallback('clearAll', function(_, cb)
-    request('dzblip:server:clearAll', nil, function(result) cb(result or 'ok') end)
+    request('dzblip:server:clearAll', nil, function(result) cb(result or { error = 'unknown' }) end)
+end)
+
+RegisterNUICallback('updatePoint', function(data, cb)
+    request('dzblip:server:updatePoint', data, function(result)
+        cb(result or { error = 'unknown' })
+    end)
 end)
 
 -- Bundles every point saved on the server into one standalone .lua file
@@ -482,4 +508,6 @@ AddEventHandler('onResourceStop', function(resourceName)
     if GetCurrentResourceName() ~= resourceName then return end
     clearAllLocal()
     clearAllPreviews()
+    if testCheckpoint then DeleteCheckpoint(testCheckpoint) end
+    if menuOpen then SetNuiFocus(false, false) end
 end)
