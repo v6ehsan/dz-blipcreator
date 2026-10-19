@@ -311,6 +311,28 @@ function showToast(msg) {
     setTimeout(() => t.classList.remove('show'), 1800);
 }
 
+function errorToast(res, fallback) {
+    const e = res && res.error;
+    if (e === 'no_permission') return '⛔ No permission';
+    if (e === 'limit_reached') return '⚠️ Item limit reached (Config.MaxPoints)';
+    if (e === 'not_found') return '⚠️ That item no longer exists';
+    return fallback;
+}
+
+// Atomic edit: one server call replaces the item in place (no remove+create
+// window where a failure would lose the original).
+async function saveEdit(kind, formData, name) {
+    const uid = state.editing.uid;
+    const res = await nuiFetch('updatePoint', { uid, data: formData });
+    if (res && res.uid) {
+        state.activeItems[uid] = { type: kind, label: formData.label || name, data: formData };
+        cancelEdit(kind);
+        showToast(`✅ ${kind[0].toUpperCase() + kind.slice(1)} updated for everyone on the server`);
+    } else {
+        showToast(errorToast(res, '❌ Failed to save changes'));
+    }
+}
+
 // ============ NUI MESSAGE LISTENER ============
 window.addEventListener('message', (e) => {
     const d = e.data;
@@ -332,6 +354,19 @@ window.addEventListener('message', (e) => {
     } else if (d.action === 'close') {
         app.classList.add('hidden');
         nuiFetch('clearPreview');
+        if (state.editing) cancelEdit(state.editing.kind);
+        ['blipLiveBadge', 'markerLiveBadge', 'checkpointLiveBadge'].forEach(id => setLiveBadge(id, false));
+    } else if (d.action === 'pointCreated' || d.action === 'pointUpdated') {
+        // Another admin added/edited something while the menu is open.
+        const p = d.point;
+        if (p) {
+            state.activeItems[p.uid] = { type: p.kind, label: (p.data && (p.data.label || p.data.typeName)) || p.kind, data: p.data };
+            if (document.getElementById('tab-active').classList.contains('active')) renderActiveList();
+        }
+    } else if (d.action === 'pointRemoved') {
+        delete state.activeItems[d.uid];
+        if (state.editing && state.editing.uid === d.uid) cancelEdit(state.editing.kind);
+        if (document.getElementById('tab-active').classList.contains('active')) renderActiveList();
     } else if (d.action === 'syncActive') {
         // Authoritative list from the server: rebuilds Active Items so it
         // always reflects everything saved (by any admin), not just what
@@ -341,7 +376,7 @@ window.addEventListener('message', (e) => {
             const label = (p.data && (p.data.label || p.data.typeName)) || p.kind;
             state.activeItems[p.uid] = { type: p.kind, label, data: p.data };
         });
-        renderActiveList();
+        if (document.getElementById('tab-active').classList.contains('active')) renderActiveList();
     }
 });
 
@@ -547,29 +582,18 @@ document.getElementById('spawnBlipBtn').addEventListener('click', async () => {
     const formData = getBlipFormData();
 
     if (state.editing && state.editing.kind === 'blip') {
-        const oldUid = state.editing.uid;
-        const rem = await nuiFetch('removeBlip', { uid: oldUid });
-        if (rem && rem.error === 'no_permission') { showToast('⛔ No permission'); return; }
-        const created = await nuiFetch('createBlip', formData);
-        if (created && created.uid) {
-            delete state.activeItems[oldUid];
-            state.activeItems[created.uid] = { type: 'blip', label: state.selectedBlip.name, data: formData };
-            cancelEdit('blip');
-            showToast('✅ Blip updated for everyone on the server');
-        } else {
-            showToast('❌ Failed to save changes');
-        }
+        await saveEdit('blip', formData, state.selectedBlip.name);
         return;
     }
 
     const created = await nuiFetch('createBlip', formData);
     if (created && created.uid) {
-        state.activeItems[created.uid] = { type: 'blip', label: state.selectedBlip.name, data: formData };
+        state.activeItems[created.uid] = { type: 'blip', label: formData.label || state.selectedBlip.name, data: formData };
         nuiFetch('clearPreview', { kind: 'blip' });
         setLiveBadge('blipLiveBadge', false);
         showToast('✅ Blip added for everyone on the server');
     } else {
-        showToast(created && created.error === 'no_permission' ? '⛔ No permission' : '❌ Failed to add blip');
+        showToast(errorToast(created, '❌ Failed to add blip'));
     }
 });
 
@@ -711,18 +735,7 @@ document.getElementById('spawnMarkerBtn').addEventListener('click', async () => 
     const formData = getMarkerFormData();
 
     if (state.editing && state.editing.kind === 'marker') {
-        const oldUid = state.editing.uid;
-        const rem = await nuiFetch('removeMarker', { uid: oldUid });
-        if (rem && rem.error === 'no_permission') { showToast('⛔ No permission'); return; }
-        const created = await nuiFetch('createMarker', formData);
-        if (created && created.uid) {
-            delete state.activeItems[oldUid];
-            state.activeItems[created.uid] = { type: 'marker', label: state.selectedMarker.name, data: formData };
-            cancelEdit('marker');
-            showToast('✅ Marker updated for everyone on the server');
-        } else {
-            showToast('❌ Failed to save changes');
-        }
+        await saveEdit('marker', formData, state.selectedMarker.name);
         return;
     }
 
@@ -733,7 +746,7 @@ document.getElementById('spawnMarkerBtn').addEventListener('click', async () => 
         setLiveBadge('markerLiveBadge', false);
         showToast('✅ Marker added for everyone on the server');
     } else {
-        showToast(created && created.error === 'no_permission' ? '⛔ No permission' : '❌ Failed to add marker');
+        showToast(errorToast(created, '❌ Failed to add marker'));
     }
 });
 
@@ -872,18 +885,7 @@ document.getElementById('spawnCheckpointBtn').addEventListener('click', async ()
     const formData = getCheckpointFormData();
 
     if (state.editing && state.editing.kind === 'checkpoint') {
-        const oldUid = state.editing.uid;
-        const rem = await nuiFetch('removeCheckpoint', { uid: oldUid });
-        if (rem && rem.error === 'no_permission') { showToast('⛔ No permission'); return; }
-        const created = await nuiFetch('createCheckpoint', formData);
-        if (created && created.uid) {
-            delete state.activeItems[oldUid];
-            state.activeItems[created.uid] = { type: 'checkpoint', label: state.selectedCheckpoint.name, data: formData };
-            cancelEdit('checkpoint');
-            showToast('✅ Checkpoint updated for everyone on the server');
-        } else {
-            showToast('❌ Failed to save changes');
-        }
+        await saveEdit('checkpoint', formData, state.selectedCheckpoint.name);
         return;
     }
 
@@ -894,7 +896,7 @@ document.getElementById('spawnCheckpointBtn').addEventListener('click', async ()
         setLiveBadge('checkpointLiveBadge', false);
         showToast('✅ Checkpoint added for everyone on the server');
     } else {
-        showToast(created && created.error === 'no_permission' ? '⛔ No permission' : '❌ Failed to add checkpoint');
+        showToast(errorToast(created, '❌ Failed to add checkpoint'));
     }
 });
 
@@ -919,22 +921,23 @@ function renderActiveList() {
         row.className = 'active-item';
         const typeIcon = item.type === 'blip' ? '📍' : (item.type === 'marker' ? '◆' : '◎');
         const typeLabel = item.type === 'blip' ? 'Blip' : (item.type === 'marker' ? 'Marker' : 'Checkpoint');
-        row.innerHTML = `
-            <div>
-                <div>${typeIcon} ${item.label}</div>
-                <div class="meta">${typeLabel} • ${uid}</div>
-            </div>
-            <div class="active-item-btns">
-                <button class="edit-btn">✏️ Edit</button>
-                <button class="remove-btn">Remove</button>
-            </div>
-        `;
+        const info = document.createElement('div');
+        const title = document.createElement('div');
+        title.textContent = `${typeIcon} ${item.label}`; // textContent: labels are user-typed, never HTML
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.textContent = `${typeLabel} • ${uid}`;
+        info.append(title, meta);
+        const btns = document.createElement('div');
+        btns.className = 'active-item-btns';
+        btns.innerHTML = '<button class="edit-btn">✏️ Edit</button><button class="remove-btn">Remove</button>';
+        row.append(info, btns);
         row.querySelector('.edit-btn').addEventListener('click', () => startEdit(uid));
         row.querySelector('.remove-btn').addEventListener('click', async () => {
             const endpoint = item.type === 'blip' ? 'removeBlip' : (item.type === 'marker' ? 'removeMarker' : 'removeCheckpoint');
             const res = await nuiFetch(endpoint, { uid });
-            if (res && res.error === 'no_permission') {
-                showToast('⛔ No permission');
+            if (!res || res.error) {
+                showToast(errorToast(res, '❌ Failed to remove'));
                 return;
             }
             delete state.activeItems[uid];
@@ -946,10 +949,22 @@ function renderActiveList() {
     });
 }
 
-document.getElementById('clearAllBtn').addEventListener('click', async () => {
+// window.confirm() is unreliable inside FiveM's CEF, so use a two-click confirm.
+let clearArmed = false, clearTimer = null;
+document.getElementById('clearAllBtn').addEventListener('click', async (ev) => {
+    const btn = ev.currentTarget;
+    if (Object.keys(state.activeItems).length && !clearArmed) {
+        clearArmed = true;
+        btn.dataset.label = btn.textContent;
+        btn.textContent = 'Click again to confirm';
+        clearTimer = setTimeout(() => { clearArmed = false; btn.textContent = btn.dataset.label; }, 3000);
+        return;
+    }
+    clearTimeout(clearTimer);
+    if (clearArmed) { clearArmed = false; btn.textContent = btn.dataset.label; }
     const res = await nuiFetch('clearAll');
-    if (res && res.error === 'no_permission') {
-        showToast('⛔ No permission');
+    if (!res || res.error) {
+        showToast(errorToast(res, '❌ Failed to clear'));
         return;
     }
     state.activeItems = {};

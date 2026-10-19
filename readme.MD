@@ -74,7 +74,13 @@ Export created elements as ready-to-use Lua code and integrate them into other r
 ### 🔐 ACE Permission Support
 
 ```cfg
-add_ace group.admin dz.blipcreator allow
+add_ace group.admin dzblip.use allow
+```
+
+Then set `Config.AccessMode = 'admin'` in `config.lua` (default is `'everyone'`). Optionally grant a player the group:
+
+```cfg
+add_principal identifier.license:xxxxxxxx group.admin
 ```
 
 ### ⚡ Performance Optimized
@@ -96,11 +102,11 @@ Designed to provide a smooth editing experience with minimal performance impact.
 ## 📦 Installation
 
 1. Download the latest release.
-2. Place `dz_blipcreator` inside your server's `resources` folder.
+2. Place the `dz-blipcreator` folder inside your server's `resources` folder.
 3. Add the following to your `server.cfg`:
 
 ```cfg
-ensure dz_blipcreator
+ensure dz-blipcreator
 ```
 
 4. Configure ACE permissions if required.
@@ -137,6 +143,11 @@ ensure dz_blipcreator
 * ACE Permission Support
 * Performance Optimization
 
+### Commands
+
+* `/dzblip` or `F6` — open the menu
+* Set `Config.Debug = true` to enable `/dztestcheckpoint` and `/dztestcp <id>`
+
 ---
 
 ## 🔗 Links
@@ -147,7 +158,7 @@ ensure dz_blipcreator
 
 🎬 **YouTube:** https://youtu.be/BmB2o_6QLoQ
 
-👨‍💻 **Developer:** v6ehsan
+👨‍💻 **Developer:** v6ehsan / AmirVentus
 
 🏢 **Organization:** DZTeam
 

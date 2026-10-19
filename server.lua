@@ -14,6 +14,7 @@
 local resourceName = GetCurrentResourceName()
 local points = {}      -- [uid] = { uid = 'dzb_1', kind = 'blip'|'marker'|'checkpoint', data = {...} }
 local uidCounter = 0
+local sanitize -- forward declaration (defined in VALIDATION below)
 
 -- ================= STORAGE =================
 
@@ -24,10 +25,17 @@ local function loadPoints()
     local ok, decoded = pcall(json.decode, raw)
     if not ok or type(decoded) ~= 'table' then return end
 
-    points = decoded
-    for uid in pairs(points) do
-        local n = tonumber(string.match(uid, 'dzb_(%d+)'))
-        if n and n > uidCounter then uidCounter = n end
+    -- re-validate everything read from disk (hand-edited / old-version files)
+    points = {}
+    for uid, p in pairs(decoded) do
+        if type(uid) == 'string' and type(p) == 'table' then
+            local data = sanitize(p.kind, p.data)
+            if data then
+                points[uid] = { uid = uid, kind = p.kind, data = data }
+                local n = tonumber(string.match(uid, 'dzb_(%d+)'))
+                if n and n > uidCounter then uidCounter = n end
+            end
+        end
     end
 end
 
@@ -40,9 +48,72 @@ local function nextUid()
     return 'dzb_' .. uidCounter
 end
 
-CreateThread(function()
-    loadPoints()
-end)
+
+-- ================= VALIDATION =================
+-- The client is never trusted: every payload is rebuilt from scratch with
+-- clamped numbers and capped strings before it is stored or broadcast, so a
+-- malicious/buggy client can't store garbage, giant strings or break export.
+
+local function num(v, default, min, max)
+    v = tonumber(v)
+    if not v or v ~= v or v == math.huge or v == -math.huge then v = default end
+    if min and v < min then v = min end
+    if max and v > max then v = max end
+    return v
+end
+
+local function int(v, default, min, max)
+    return math.floor(num(v, default, min, max))
+end
+
+local function str(v, maxLen)
+    if type(v) ~= 'string' then return '' end
+    v = v:gsub('[%c]', '')
+    return v:sub(1, maxLen)
+end
+
+sanitize = function(kind, d)
+    if type(d) ~= 'table' or type(d.coords) ~= 'table' then return nil end
+    local ok = tonumber(d.coords.x) and tonumber(d.coords.y) and tonumber(d.coords.z)
+    if not ok then return nil end
+
+    local out = {
+        coords = {
+            x = num(d.coords.x, 0.0, -10000.0, 10000.0),
+            y = num(d.coords.y, 0.0, -10000.0, 10000.0),
+            z = num(d.coords.z, 0.0, -1000.0, 5000.0),
+        },
+        heading = num(d.heading, 0.0, -360.0, 360.0),
+        typeName = str(d.typeName, 64),
+    }
+
+    if kind == 'blip' then
+        out.sprite = int(d.sprite, 1, 0, 2000)
+        out.color = int(d.color, 0, 0, 200)
+        out.scale = num(d.scale, 1.0, 0.05, 10.0)
+        out.label = str(d.label, 64)
+    elseif kind == 'marker' then
+        out.markerType = int(d.markerType, 1, 0, 100)
+        out.r, out.g, out.b, out.a = int(d.r, 255, 0, 255), int(d.g, 0, 0, 255), int(d.b, 255, 0, 255), int(d.a, 150, 0, 255)
+        out.scaleX, out.scaleY, out.scaleZ = num(d.scaleX, 1.0, 0.0, 500.0), num(d.scaleY, 1.0, 0.0, 500.0), num(d.scaleZ, 1.0, 0.0, 500.0)
+    elseif kind == 'checkpoint' then
+        out.checkpointType = int(d.checkpointType, 0, 0, 100)
+        out.r, out.g, out.b, out.a = int(d.r, 255, 0, 255), int(d.g, 0, 0, 255), int(d.b, 255, 0, 255), int(d.a, 150, 0, 255)
+        out.radius = num(d.radius, 5.0, 0.1, 500.0)
+    else
+        return nil
+    end
+    return out
+end
+
+local function countPoints()
+    local n = 0
+    for _ in pairs(points) do n = n + 1 end
+    return n
+end
+
+-- load synchronously so a requestSync right after start never sees an empty list
+loadPoints()
 
 -- ================= PERMISSIONS =================
 
@@ -81,13 +152,22 @@ AddEventHandler('dzblip:server:createPoint', function(reqId, payload)
         reply(src, reqId, { error = 'no_permission' })
         return
     end
-    if type(payload) ~= 'table' or type(payload.kind) ~= 'string' or type(payload.data) ~= 'table' then
+    if type(payload) ~= 'table' or type(payload.kind) ~= 'string' then
         reply(src, reqId, { error = 'bad_request' })
+        return
+    end
+    local data = sanitize(payload.kind, payload.data)
+    if not data then
+        reply(src, reqId, { error = 'bad_request' })
+        return
+    end
+    if countPoints() >= (Config.MaxPoints or 500) then
+        reply(src, reqId, { error = 'limit_reached' })
         return
     end
 
     local uid = nextUid()
-    local point = { uid = uid, kind = payload.kind, data = payload.data }
+    local point = { uid = uid, kind = payload.kind, data = data }
     points[uid] = point
     savePoints()
 
@@ -95,6 +175,36 @@ AddEventHandler('dzblip:server:createPoint', function(reqId, payload)
     -- broadcast to EVERY connected client (including the creator), so this
     -- is the single place a blip/marker/checkpoint actually gets drawn
     TriggerClientEvent('dzblip:client:pointCreated', -1, point)
+end)
+
+-- ================= UPDATE (atomic edit) =================
+-- Replaces an existing point in one step, so editing can never leave the
+-- map without the item if a second request fails (the old client flow
+-- was remove + create, which lost the item on failure).
+
+RegisterNetEvent('dzblip:server:updatePoint')
+AddEventHandler('dzblip:server:updatePoint', function(reqId, payload)
+    local src = source
+    if not hasPermission(src) then
+        reply(src, reqId, { error = 'no_permission' })
+        return
+    end
+    local uid = type(payload) == 'table' and payload.uid
+    local old = type(uid) == 'string' and points[uid]
+    if not old then
+        reply(src, reqId, { error = 'not_found' })
+        return
+    end
+    local data = sanitize(old.kind, payload.data)
+    if not data then
+        reply(src, reqId, { error = 'bad_request' })
+        return
+    end
+
+    old.data = data
+    savePoints()
+    reply(src, reqId, { uid = uid })
+    TriggerClientEvent('dzblip:client:pointUpdated', -1, old)
 end)
 
 -- ================= REMOVE =================
@@ -177,7 +287,7 @@ local function codeForPoint(p)
         lines[#lines + 1] = '    SetBlipAsShortRange(blip, true)'
         lines[#lines + 1] = "    BeginTextCommandSetBlipName('STRING')"
         lines[#lines + 1] = string.format('    AddTextComponentSubstringPlayerName(%s)',
-            luaStr(d.label ~= '' and d.label or d.typeName or 'Blip'))
+            luaStr((d.label ~= '' and d.label) or (d.typeName ~= '' and d.typeName) or 'Blip'))
         lines[#lines + 1] = '    EndTextCommandSetBlipName(blip)'
         lines[#lines + 1] = 'end'
     elseif p.kind == 'marker' then
@@ -220,7 +330,8 @@ AddEventHandler('dzblip:server:export', function(reqId)
 
     local ordered = {}
     for _, p in pairs(points) do ordered[#ordered + 1] = p end
-    table.sort(ordered, function(a, b) return a.uid < b.uid end)
+    local function uidNum(p) return tonumber(string.match(p.uid or '', 'dzb_(%d+)')) or 0 end
+    table.sort(ordered, function(a, b) return uidNum(a) < uidNum(b) end)
 
     if #ordered == 0 then
         reply(src, reqId, { error = 'empty' })
